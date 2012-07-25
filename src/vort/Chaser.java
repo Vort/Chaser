@@ -33,9 +33,9 @@ class ScannedData
     public void Paint(Graphics2D g)
     {
     	g.setColor(Color.red);
-    	g.drawRect((int)X, (int)Y, 10, 10);
+    	g.drawRect((int)X - 5, (int)Y - 5, 10, 10);
     	g.setColor(Color.pink);
-    	g.drawRect((int)PredX, (int)PredY, 10, 10);
+    	g.drawRect((int)PredX - 5, (int)PredY - 5, 10, 10);
     }
     
     public boolean IsExpired(int tick)
@@ -123,17 +123,21 @@ public class Chaser extends AdvancedRobot
                     angle = 360 - angle;
 
                 double turnAngle = FixTurnAngle(angle - getHeading());
-                double radarTurnAngle = FixTurnAngle(angle - getRadarHeading());
-                
+                double maxTurn = 10.0 - 0.75 * Math.abs(getVelocity());
+                double nextTurn = turnAngle;
+                if (Math.abs(turnAngle) > maxTurn)
+                	nextTurn = Math.signum(turnAngle) * maxTurn;
+                double radarTurnAngle = FixTurnAngle(angle - getRadarHeading() - nextTurn);
+
                 if (vlen < 100.0 && Math.abs(turnAngle) < 4.0)
                     setFire(3.0);
                 
-                
-                setTurnRadarRight(radarTurnAngle);
+                if (radarTurnAngle > 0.0)
+                	setTurnRadarRight(radarTurnAngle);
+                else
+                	setTurnRadarLeft(-radarTurnAngle);
                 setTurnRight(turnAngle);
                 setAhead(vlen - 60);
-
-                scan();
             }
             execute();
             tick++;
