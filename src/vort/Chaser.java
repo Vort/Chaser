@@ -1,5 +1,7 @@
 package vort;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -12,6 +14,8 @@ class ScannedData
 {
 	public double X;
 	public double Y;
+	public double PredX;
+	public double PredY;
 	int tick;
 	ScannedRobotEvent rawData;
 	
@@ -21,13 +25,22 @@ class ScannedData
         double absAngle = myRobot.getHeadingRadians() + scanned.getBearingRadians();
         X = myRobot.getX() + Math.sin(absAngle) * scanned.getDistance();
         Y = myRobot.getY() + Math.cos(absAngle) * scanned.getDistance();
-        System.out.println("Scanned: " + X + ", " + Y);
+        PredX = X + Math.sin(scanned.getHeadingRadians()) * scanned.getVelocity();
+        PredY = Y + Math.cos(scanned.getHeadingRadians()) * scanned.getVelocity();
         this.tick = tick;
     }	
     
+    public void Paint(Graphics2D g)
+    {
+    	g.setColor(Color.red);
+    	g.drawRect((int)X, (int)Y, 10, 10);
+    	g.setColor(Color.pink);
+    	g.drawRect((int)PredX, (int)PredY, 10, 10);
+    }
+    
     public boolean IsExpired(int tick)
     {
-        return (tick - this.tick) > 10;
+        return (tick - this.tick) > 6;
     }
 }
 
@@ -49,8 +62,8 @@ public class Chaser extends AdvancedRobot
     	ScannedData minDistBot = null;
         for (ScannedData bot : scanned.values())
         {
-            double deltaX = bot.X - getX();
-            double deltaY = bot.Y - getY();
+            double deltaX = bot.PredX - getX();
+            double deltaY = bot.PredY - getY();
             double vlen = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
             if (minDistBot == null)
             {
@@ -69,10 +82,18 @@ public class Chaser extends AdvancedRobot
         return minDistBot;
     }
     
+    public void onPaint(Graphics2D g)
+    {
+        for (ScannedData bot : scanned.values())
+        	bot.Paint(g);
+    }
+    
 	public void run()
 	{
 		tick = 0;
 		scanned = new HashMap<String, ScannedData>();
+		Color botColor = new Color(0xEE, 0xEE, 0xFF); 
+		setColors(botColor, botColor, botColor);
 		
         for (; ; )
         {
@@ -92,8 +113,8 @@ public class Chaser extends AdvancedRobot
             else
             {
                 ScannedData sd = GetNearestBot();
-                double deltaX = sd.X - getX();
-                double deltaY = sd.Y - getY();
+                double deltaX = sd.PredX - getX();
+                double deltaY = sd.PredY - getY();
                 double vlen = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                 double vxn = deltaX / vlen;
                 double vyn = deltaY / vlen;
@@ -102,14 +123,15 @@ public class Chaser extends AdvancedRobot
                     angle = 360 - angle;
 
                 double turnAngle = FixTurnAngle(angle - getHeading());
-                setTurnRight(turnAngle);
                 double radarTurnAngle = FixTurnAngle(angle - getRadarHeading());
+                
+                if (vlen < 100.0 && Math.abs(turnAngle) < 4.0)
+                    setFire(3.0);
+                
+                
                 setTurnRadarRight(radarTurnAngle);
-
+                setTurnRight(turnAngle);
                 setAhead(vlen - 60);
-
-                if (Math.abs(turnAngle) < 2.0)
-                    setFire(vlen < 80 ? 3.0 : 1.0);
 
                 scan();
             }
