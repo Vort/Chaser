@@ -128,9 +128,14 @@ public class Chaser extends AdvancedRobot
                 if (Math.abs(turnAngle) > maxTurn)
                 	nextTurn = Math.signum(turnAngle) * maxTurn;
                 double radarTurnAngle = FixTurnAngle(angle - getRadarHeading() - nextTurn);
+                if (radarTurnAngle < 0.0)
+                	radarTurnAngle -= 5.0;
+                else
+                	radarTurnAngle += 5.0;
 
-                if (vlen < 100.0 && Math.abs(turnAngle) < 4.0)
-                    setFire(3.0);
+                if (getGunHeat() == 0.0)
+                	if (vlen < 100.0 && Math.abs(turnAngle) < 4.0)
+                		setFire(3.0);
                 
                 if (radarTurnAngle > 0.0)
                 	setTurnRadarRight(radarTurnAngle);
